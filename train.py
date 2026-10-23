@@ -82,7 +82,11 @@ def main():
         per_device_train_batch_size=2,
         gradient_accumulation_steps=4,
         learning_rate=2e-4,
-        fp16=True,   # T4 = sm75: bf16 gemm unsupported, use fp16
+        # T4 (sm75) + new PEFT/TRL: fp16 GradScaler crashes on bf16 *intermediate*
+        # tensors created internally by prepare_model_for_kbit_training in backward
+        # (NOT params — so no cast can fix it). Proven fix: disable mixed precision
+        # entirely. Slower (~2x) but works.
+        fp16=False,
         bf16=False,
         logging_steps=10,
         eval_strategy="epoch",
