@@ -70,8 +70,8 @@ def main():
         per_device_train_batch_size=2,
         gradient_accumulation_steps=4,
         learning_rate=2e-4,
-        fp16=False,
-        bf16=True,
+        fp16=True,   # T4 = sm75: bf16 gemm unsupported, use fp16
+        bf16=False,
         logging_steps=10,
         eval_strategy="epoch",
         save_strategy="epoch",
