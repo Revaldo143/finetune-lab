@@ -38,7 +38,7 @@ def main():
     bnb = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.bfloat16,
+        bnb_4bit_compute_dtype=torch.float16,  # T4 = sm75: no bf16 gemm support
     )
     tok = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)
     tok.pad_token = tok.eos_token
