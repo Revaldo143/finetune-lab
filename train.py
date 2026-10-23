@@ -49,6 +49,7 @@ def main():
         quantization_config=bnb,
         device_map="auto",
         trust_remote_code=True,
+        torch_dtype=torch.float16,  # non-quantized layers (lm_head, norms) also fp16 — T4 has no bf16
     )
     model = prepare_model_for_kbit_training(model)
 
