@@ -37,7 +37,7 @@ def main():
     base = AutoModelForCausalLM.from_pretrained(
         MODEL_ID, quantization_config=bnb, device_map="auto",
         trust_remote_code=True,
-        torch_dtype=torch.float16)  # non-quantized layers (lm_head, norms) also fp16 — T4 has no bf16
+        dtype=torch.float16)  # NOT torch_dtype (deprecated/ignored) — T4 has no bf16
     tuned = PeftModel.from_pretrained(base, ADAPTER)
 
     for t in TESTS:

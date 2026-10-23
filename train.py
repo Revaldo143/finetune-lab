@@ -19,7 +19,7 @@ from transformers import (
     BitsAndBytesConfig,
     TrainingArguments,
 )
-from peft import LoraConfig, prepare_model_for_kbit_training
+from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
 from trl import SFTTrainer
 
 MODEL_ID = "Qwen/Qwen2.5-7B-Instruct"
@@ -49,7 +49,7 @@ def main():
         quantization_config=bnb,
         device_map="auto",
         trust_remote_code=True,
-        torch_dtype=torch.float16,  # non-quantized layers (lm_head, norms) also fp16 — T4 has no bf16
+        dtype=torch.float16,  # NOT torch_dtype (deprecated/ignored) — non-quantized layers (lm_head etc) must be fp16 on T4
     )
     model = prepare_model_for_kbit_training(model)
 
@@ -61,6 +61,17 @@ def main():
                         "gate_proj", "up_proj", "down_proj"],
         task_type="CAUSAL_LM",
     )
+    model = get_peft_model(model, lora)
+    # Safety: peft builds LoRA adapters in the base model's orig dtype (bf16);
+    # T4 (sm75) has no bf16 kernels, so cast every non-quantized bf16 param to fp16.
+    # Params4bit (quantized weights) is skipped via its quant_state attribute.
+    n_cast = 0
+    for p in model.parameters():
+        if p.dtype == torch.bfloat16 and not hasattr(p, "quant_state"):
+            p.data = p.data.to(torch.float16)
+            n_cast += 1
+    print(f"LoRA-wrapped; cast {n_cast} bf16 params to fp16")
+    model.print_trainable_parameters()
 
     train_ds = load_dataset("json", data_files="dataset_train.jsonl")["train"]
     val_ds = load_dataset("json", data_files="dataset_val.jsonl")["train"]
@@ -82,10 +93,9 @@ def main():
     )
 
     trainer = SFTTrainer(
-        model=model,
+        model=model,  # already LoRA-wrapped above; do NOT pass peft_config again
         train_dataset=train_ds,
         eval_dataset=val_ds,
-        peft_config=lora,
         processing_class=tok,
         args=args,
         formatting_func=formatting_func,
