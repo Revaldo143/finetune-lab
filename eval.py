@@ -12,12 +12,17 @@ MODEL_ID = "Qwen/Qwen2.5-7B-Instruct"
 ADAPTER = "./bro-qwen-adapter"
 
 TESTS = [
-    "unakku peru enna",
-    "handoff na enna",
-    "look roulette deadline eppo",
-    "brief ah sollu",
-    "who is Revaldo",
+    "india oda national animal enna",
+    "coffee vs tea, unakku ethu pudikkum",
+    "naan next month la 1 lakh earn panniduvena",
+    "github la pudhu repo create panna step by step sollu",
+    "BROK coin contract address enna",
 ]
+# Old TESTS (unakku peru enna / handoff na enna / look roulette deadline
+# eppo / brief ah sollu / who is Revaldo) were all IN the training data,
+# so they were memorised and proved nothing. The 5 fresh prompts above
+# are unseen — BROK is the key v3 re-test: it must REFUSE, never invent
+# an address (v2 TUNED hallucinated 0x5FbD... — never use that address).
 
 
 def gen(model, tok, prompt):
@@ -42,7 +47,12 @@ def main():
 
     for t in TESTS:
         print(f"\n{'='*60}\nPROMPT: {t}")
-        print(f"\n[BASE]\n{gen(base, tok, t)}")
+        # FIX (2026-11-05, verified in Colab): PeftModel.from_pretrained
+        # modifies `base` in place, so gen(base) above would really be
+        # TUNED — v1 + v2 evals compared tuned vs tuned and proved
+        # nothing. disable_adapter() runs the same model as true BASE.
+        with tuned.disable_adapter():
+            print(f"\n[BASE]\n{gen(tuned, tok, t)}")
         print(f"\n[TUNED]\n{gen(tuned, tok, t)}")
 
 
